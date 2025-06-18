@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # FastAPI Application
+  api:
+    build: .
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - UNSPLASH_ACCESS_KEY=${UNSPLASH_ACCESS_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DBT_PROFILES_DIR=/app/dbt_project
+      - DBT_PROJECT_DIR=/app/dbt_project
+    volumes:
+      - ./src:/app/src
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+    env_file:
+      - .env
+
+  # Streamlit Dashboard
+  dashboard:
+    build: .
+    command: streamlit run src/dashboard/main.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+    env_file:
+      - .env
+
+  # dbt Runner (for scheduled ETL)
+  dbt-runner:
+    build: .
+    command: python src/etl/dbt_runner.py
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - UNSPLASH_ACCESS_KEY=${UNSPLASH_ACCESS_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DBT_PROFILES_DIR=/app/dbt_project
+      - DBT_PROJECT_DIR=/app/dbt_project
+    volumes:
+      - ./src:/app/src
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+    env_file:
+      - .env
+    profiles:
+      - manual  # Only run manually or via cron 
